@@ -40,7 +40,7 @@ void readFile(MPI_Comm communicator, char filename[]){
     loopoffset = new_size*nodechucksize;
     for (int i=0; i < 3; i++){
         overlap = (i > 0) ? 10: 0;
-        MPI_File_set_view(fh,(new_rank*sizeof(char)*nodechucksize+(loopoffset*i))-overlap,MPI_CHAR,MPI_CHAR,"native",MPI_INFO_NULL);
+        MPI_File_set_view(fh,(new_rank*sizeof(char)*nodechucksize+(loopoffset*i))+overlap,MPI_CHAR,MPI_CHAR,"native",MPI_INFO_NULL);
         MPI_File_read(fh, &text_buffer[0], chunksize, MPI_CHAR, &status);
         for (int i=0; i<text_buffer.size(); i++)
             cout << text_buffer.at(i);
