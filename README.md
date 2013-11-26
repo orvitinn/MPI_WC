@@ -9,3 +9,6 @@ MPI implementation of Map-reduce program.
 <li>Routing nodes sort input values and send to reduce nodes</li>
 <li>Reduce nodes gather data, sum the values and write to output file</li>
 </ol>
+
+
+LD_LIBRARY_PATH="./protobuf-2.5.0/src/.libs/:$LD_LIBRARY_PATH"
