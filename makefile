@@ -1,11 +1,12 @@
 CC=mpic++
 CFLAGS=-Wall -std=gnu++11
-OUT=mpi_wc
+OUT=wc
 
 all: do
 
 do: main.cpp
-	$(CC) $(CFLAGS) main.cpp -o $(OUT)
+	$(CC) $(CFLAGS) main.cpp reducer.cpp -o $(OUT)
+
 
 clean:
 	rm -rf $(OUT)
