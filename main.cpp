@@ -12,6 +12,7 @@
 #include <boost/algorithm/string.hpp>
 #include <ctype.h>
 #include <typeinfo>
+#include <sstream>
 
 #include "mpi.h"
 
@@ -69,11 +70,24 @@ void readFile(MPI_Comm communicator, char filename[]){
         split(text_string_buffer, '\n', lines);
         # pragma omp for
         for(string &line: lines){
+            std::stringstream ss;
+            int first=0;
             for (char &stafur: line){
-                while (isalpha(stafur))
-                    continue
+                if(isalpha(stafur) && first == 0)
+                    continue;
                 
-                cout << stafur << endl;
+                if(!isalpha(stafur) && first == 0){
+                    first = 1;
+                    continue;
+                }
+                
+                if(isalpha(stafur))
+                    ss << stafur;
+                
+                if(!isalpha(stafur) && ss.str().length() > 0){
+                    cout << "ord : " << ss.str() << endl;
+                    ss.str(std::string());
+                }
             }
         }
         cout << endl;
