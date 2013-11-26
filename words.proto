@@ -1,0 +1,8 @@
+message Word {
+  required string word = 1;
+  required int32 count = 2;
+}
+
+message WordList {
+  repeated Word words = 1;
+}
