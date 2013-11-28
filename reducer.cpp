@@ -15,6 +15,7 @@
 #include <map>
 
 #include "mpi.h"
+#include "words.pb.h"
 
 using std::cout;
 using std::endl;
@@ -24,6 +25,7 @@ using std::string;
 
 extern int overlap;
 extern int nodechucksize;
+extern vector<int> mapparar;
 
 
 void split(const std::string &s, char delim, std::vector<std::string> &elems) {
@@ -41,9 +43,10 @@ inline std::string trim(const std::string &s)
     return (wsback<=wsfront ? std::string() : std::string(wsfront,wsback));
 }
 
+void send_buffer_to_partitioner(int rank, char* buffer, int size);
 
-void reducer(MPI_Comm communicator, const string& filename){
 
+void reducer(MPI_Comm communicator, int rank, const string& filename){
     int new_rank, new_size;
     MPI_Comm_rank(communicator,&new_rank);
     cout << "reddari " << new_rank << endl;
@@ -67,7 +70,6 @@ void reducer(MPI_Comm communicator, const string& filename){
     for (int i=0; i < 3; i++){
         MPI_File_set_view(fh,(new_rank*sizeof(char)*nodechucksize+(loopoffset*i)),MPI_CHAR,MPI_CHAR,"native",MPI_INFO_NULL);
         MPI_File_read(fh, &text_buffer[0], chunksize+readoverlap, MPI_CHAR, &status);
-        printf("read processor rank %i read : ",new_rank);
         std::string text_string_buffer(text_buffer.begin(), text_buffer.end());
         split(text_string_buffer, '\n', lines);
         for(string &line: lines){
@@ -86,7 +88,6 @@ void reducer(MPI_Comm communicator, const string& filename){
                     ss << stafur;
                 
                 if(!isalpha(stafur) && ss.str().length() > 0){
-                    cout << "ord : " << ss.str() << endl;
                     string ord = ss.str();
                     auto it = teljari.find(ord);
                     if (it != teljari.end())
@@ -101,14 +102,29 @@ void reducer(MPI_Comm communicator, const string& filename){
                 }
             }
         }
-        cout << endl;
+        // nú inniheldur teljari öll orð og tíðni þeirra...
+        WordList output;
+        for (auto it: teljari)
+        {
+            cout << it.first << " : " << it.second << endl;
+            Word* new_word = output.add_words();
+            new_word->word = it.first;
+            new_word->count = it.second;
+        }
+        
+        int size = ret.ByteSize();
+        char* buffer = new char[size];
+        ouput.SerializeToArray(buffer, size);
+        send_buffer_to_partitioner(new_rank, buffer, size);
     }
-    cout << "reducer done reducing" << endl;
-    // nú inniheldur teljari öll orð og tíðni þeirra...
-    for (auto it: teljari)
-    {
-        cout << it.first << " : " << it.second << endl;
-    }
-    
     MPI_File_close(&fh);
 }
+
+void send_buffer_to_partitioner(int rank, char* buffer, int size);
+{
+    // select the corresponding partitioner (one for each mapper
+    int destination_rank = rank + mapparar.size();
+    MPI_Send(buffer, size, MPI_CHAR, destination_rank, 0, MPI_COMM_WORLD);
+    delete[] buffer;
+}
+
