@@ -7,7 +7,7 @@ LIB_FOLDER=/home/maa33/code/mpi_wc/protobuf-2.5.0/src/.libs/
 all: do
 
 do: main.cpp
-	$(CC) $(CFLAGS) main.cpp reducer.cpp words.pb.cc -o $(OUT) -I $(INCL_FOLDER) -L $(LIB_FOLDER) /home/maa33/code/mpi_wc/protobuf-2.5.0/src/.libs/libprotobuf.a
+	$(CC) $(CFLAGS) main.cpp mapper.cpp reducer.cpp words.pb.cc -o $(OUT) -I $(INCL_FOLDER) -L $(LIB_FOLDER) /home/maa33/code/mpi_wc/protobuf-2.5.0/src/.libs/libprotobuf.a
 
 
 clean:
