@@ -19,7 +19,6 @@
 
 using std::cout;
 using std::endl;
-using std::time;
 using std::vector;
 using std::string;
 
@@ -43,10 +42,11 @@ inline std::string trim(const std::string &s)
     return (wsback<=wsfront ? std::string() : std::string(wsfront,wsback));
 }
 
-void send_buffer_to_partitioner(int rank, char* buffer, int size);
+void send_buffer_to_reducer(int rank, vector<char>& buffer, int size);
+void process_buffer(vector<char>&& buffer, int rank);
 
-
-void mapper(MPI_Comm communicator, int rank, const string& filename){
+void mapper(MPI_Comm communicator, int rank, const string& filename)
+{
     int new_rank, new_size;
     MPI_Comm_rank(communicator,&new_rank);
     cout << "reddari " << new_rank << endl;
@@ -64,67 +64,79 @@ void mapper(MPI_Comm communicator, int rank, const string& filename){
     loopoffset = new_size*nodechucksize;
     readoverlap = overlap * sizeof(char);
     vector<char> text_buffer(chunksize+overlap);
-    vector<std::string> lines;
-    std::vector<std::string> words;
-    std::map<string, int> teljari;
-    for (int i=0; i < 3; i++){
-        MPI_File_set_view(fh,(new_rank*sizeof(char)*nodechucksize+(loopoffset*i)),MPI_CHAR,MPI_CHAR,"native",MPI_INFO_NULL);
+    for (int i=0; i < 3; i++)  // todo: read everything - not just three iterations.
+    {
+        MPI_File_set_view(fh, (new_rank*sizeof(char)*nodechucksize+(loopoffset*i)), MPI_CHAR,MPI_CHAR, "native", MPI_INFO_NULL);
         MPI_File_read(fh, &text_buffer[0], chunksize+readoverlap, MPI_CHAR, &status);
-        std::string text_string_buffer(text_buffer.begin(), text_buffer.end());
-        split(text_string_buffer, '\n', lines);
-        for(string &line: lines){
-            std::stringstream ss;
-            int first=0;
-            for (char &stafur: line){
-                if(isalpha(stafur) && first == 0)
-                    continue;
-                
-                if(!isalpha(stafur) && first == 0){
-                    first = 1;
-                    continue;
-                }
-                
-                if(isalpha(stafur))
-                    ss << stafur;
-                
-                if(!isalpha(stafur) && ss.str().length() > 0){
-                    string ord = ss.str();
-                    auto it = teljari.find(ord);
-                    if (it != teljari.end())
-                    {
-                        it->second++;
-                    }
-                    else
-                    {
-                        teljari[ord] = 1;
-                    }
-                    ss.str(std::string());
-                }
-            }
-        }
-        // nú inniheldur teljari öll orð og tíðni þeirra...
-        WordList output;
-        for (auto it: teljari)
-        {
-            cout << it.first << " : " << it.second << endl;
-            Word* new_word = output.add_words();
-            new_word->word = it.first;
-            new_word->count = it.second;
-        }
-        
-        int size = ret.ByteSize();
-        char* buffer = new char[size];
-        ouput.SerializeToArray(buffer, size);
-        send_buffer_to_partitioner(new_rank, buffer, size);
+        int read_bytes;
+        MPI_Get_count(&status, MPI_CHAR, &read_bytes);
+        text_buffer.resize(read_bytes);
+        process_buffer(std::move(text_buffer), new_rank);
+        text_buffer.clear();
     }
     MPI_File_close(&fh);
 }
 
-void send_buffer_to_partitioner(int rank, char* buffer, int size);
+void process_buffer(vector<char>&& text_buffer, int rank)
+{
+    vector<std::string> lines;
+    std::vector<std::string> words;
+    std::map<string, int> teljari;
+    
+    std::string text_string_buffer(text_buffer.begin(), text_buffer.end());
+    split(text_string_buffer, '\n', lines);
+    for(string &line: lines){
+        std::stringstream ss;
+        int first=0;
+        for (char &stafur: line){
+            if(isalpha(stafur) && first == 0)
+                continue;
+            
+            if(!isalpha(stafur) && first == 0){
+                first = 1;
+                continue;
+            }
+            
+            if(isalpha(stafur))
+                ss << stafur;
+            
+            if(!isalpha(stafur) && ss.str().length() > 0){
+                string ord = ss.str();
+                auto it = teljari.find(ord);
+                if (it != teljari.end())
+                {
+                    it->second++;
+                }
+                else
+                {
+                    teljari[ord] = 1;
+                }
+                ss.str("");
+                ss.clear();
+            }
+        }
+    }
+    // nú inniheldur teljari öll orð og tíðni þeirra...
+    WordList output;
+    for (auto it: teljari)
+    {
+        cout << it.first << " : " << it.second << endl;
+        Word* new_word = output.add_words();
+        new_word->set_word(it.first);
+        new_word->set_count(it.second);
+    }
+    
+    int size = output.ByteSize();
+    vector<char> buffer(size);
+    output.SerializeToArray(&buffer[0], size);
+    buffer.resize(size);
+    send_buffer_to_reducer(rank, buffer, size);
+}
+
+void send_buffer_to_reducer(int rank, vector<char>& buffer, int size)
 {
     // select the corresponding partitioner (one for each mapper
     int destination_rank = rank + mapparar.size();
-    MPI_Send(buffer, size, MPI_CHAR, destination_rank, 0, MPI_COMM_WORLD);
-    delete[] buffer;
+    MPI_Send(&buffer[0], size, MPI_CHAR, destination_rank, 0, MPI_COMM_WORLD);
 }
 
