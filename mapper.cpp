@@ -64,10 +64,23 @@ void mapper(MPI_Comm communicator, int rank, const string& filename)
     loopoffset = new_size*nodechucksize;
     readoverlap = overlap * sizeof(char);
     vector<char> text_buffer(chunksize+overlap);
-    for (int i=0; i < 3; i++)  // todo: read everything - not just three iterations.
-    {
-        MPI_File_set_view(fh, (new_rank*sizeof(char)*nodechucksize+(loopoffset*i)), MPI_CHAR,MPI_CHAR, "native", MPI_INFO_NULL);
+
+
+    MPI_Offset mypart = filesize/new_size;
+    for (int i=0; i <= ceil(mypart/chunksize); i++){
+        cout << "rank : " << new_rank << " Trying to read from " << new_rank*sizeof(char)*chunksize+(loopoffset*i) << " to "  << new_rank*sizeof(char)*chunksize+(loopoffset*i)+chunksize+readoverlap << endl;
+        if(((new_rank*sizeof(char)*chunksize+(loopoffset*i)+chunksize+readoverlap) > filesize)){
+            chunksize = filesize - ((new_rank*sizeof(char)*chunksize+(loopoffset*i))-readoverlap);
+            cout << "rank : " << new_rank << " Trying to read from " << new_rank*sizeof(char)*chunksize+(loopoffset*i) << " to "  << new_rank*sizeof(char)*chunksize+(loopoffset*i)+chunksize+readoverlap << " file is only " << filesize << " will only read " << chunksize << endl;
+            if (chunksize < 0){
+                cout << "Gone to far in file exiting" << endl;
+                break;
+            }
+        }
+        
+        MPI_File_set_view(fh,(new_rank*chunksize+(loopoffset*i)),MPI_CHAR,MPI_CHAR,"native",MPI_INFO_NULL);
         MPI_File_read(fh, &text_buffer[0], chunksize+readoverlap, MPI_CHAR, &status);
+    
         int read_bytes;
         MPI_Get_count(&status, MPI_CHAR, &read_bytes);
         text_buffer.resize(read_bytes);
