@@ -63,12 +63,14 @@ int main(int argc, char* argv[]) {
     
     if (rank < MAX_MAPP_ID)
     {
-        mapper(reddararcomm, rank, readfilename);
+        mapper(mapparacom, rank, readfilename);
     }
+    /*
     else if (rank < MAX_PART_ID)
     {
-        reducer(mapparacom, rank);
+        reducer(reddararcomm, rank);
     }
+     */
     // einn process er í gather lógík, fær niðurstöður frá öllum reducers
     
     cout << "Node " << rank << " stopping." << endl;

@@ -49,7 +49,7 @@ void mapper(MPI_Comm communicator, int rank, const string& filename)
 {
     int new_rank, new_size;
     MPI_Comm_rank(communicator,&new_rank);
-    cout << "reddari " << new_rank << endl;
+    cout << "mapper " << new_rank << endl;
     int loopoffset, readoverlap;
 
     MPI_File fh;
@@ -130,12 +130,12 @@ void process_buffer(vector<char>&& text_buffer, int rank)
     vector<char> buffer(size);
     output.SerializeToArray(&buffer[0], size);
     buffer.resize(size);
-    send_buffer_to_reducer(rank, buffer, size);
+    // send_buffer_to_reducer(rank, buffer, size);
 }
 
 void send_buffer_to_reducer(int rank, vector<char>& buffer, int size)
 {
-    // select the corresponding partitioner (one for each mapper
+    // select the corresponding reducer (one for each part of the buffer)
     int destination_rank = rank + mapparar.size();
     MPI_Send(&buffer[0], size, MPI_CHAR, destination_rank, 0, MPI_COMM_WORLD);
 }
