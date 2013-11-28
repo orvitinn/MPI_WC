@@ -43,7 +43,7 @@ void collector(int rank)
         WordList input;
         input.ParseFromArray(&buffer[0], read_bytes);
         count++;
-        cout << "Collector read [" << read_bytes << "] bytes, [" << input.words_size() << "], " << data << " << count << "] << endl;
+        cout << "Collector read [" << read_bytes << "] bytes, [" << input.words_size() << "], count: " << count << endl;
         
         for (int i=0; i<input.words_size(); i++)
         {
