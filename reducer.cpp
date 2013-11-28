@@ -20,36 +20,84 @@ using std::string;
 
 extern int overlap;
 extern int nodechucksize;
+extern int collector_rank;
 extern vector<int> mapparar;
 
 const int BUFFER_SIZE = 1024 * 1024;
 
-void send_buffer_to_partitioner(int rank, char* buffer, int size);
+void send_buffer_to_collector(vector<char>& buffer);
 
 void reducer(MPI_Comm communicator, int rank)
 {
-    int new_rank, new_size;
+    cout << "reducer " << rank << " starting." << endl;
+    int new_rank;
     MPI_Comm_rank(communicator,&new_rank);
     MPI_Status status;
 
-    char* buffer = new char[BUFFER_SIZE];
+    vector<char> buffer(BUFFER_SIZE);
+    std::map<string, int> teljari;
+    int quit_count=0;
     
     while (true) {
-        MPI_Recv(buffer, BUFFER_SIZE, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv(&buffer[0], BUFFER_SIZE, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
         int read_bytes;
         MPI_Get_count(&status, MPI_CHAR, &read_bytes);
+        buffer.resize(read_bytes);
         WordList input;
-        input.ParseFromArray(buffer, read_bytes);
+        input.ParseFromArray(&buffer[0], read_bytes);
         
-        // höfum nú array... skiptum því upp.. og sendum á reddara...
-        // þurfum "fötu" fyrir hvern reddara...
-        // vitum að listinn sem við fengum inn er raðaðaur
+        // ef við fengum tóman lista er þessi nóða hætt.
+        if (input.words_size() == 0)
+        {
+            cout << "Reducer " << rank << " got an empty list, quit_count = " << quit_count << endl;
+            quit_count++;
+            if (quit_count == mapparar.size())
+            {
+                break;
+            }
+            else
+            {
+                continue;
+            }
+        }
+        
+        cout << "Reducer " << rank << " got " << input.words_size() << " words from a mapper. Processing." << endl;
+        
         for (int i=0; i<input.words_size(); i++)
         {
             const Word& word = input.words(i);
+            auto it = teljari.find(word.word());
+            if (it != teljari.end())
+            {
+                it->second++;
+            }
+            else
+            {
+                teljari[word.word()] = 1;
+            }
         }
     }
+                                   
+    // done... send everything to the collector
+    cout << "reducer " << rank << "done receiving data, sending to the collector" << endl;
+
+    WordList output;
+    for (auto it: teljari)
+    {
+        Word* new_word = output.add_words();
+        new_word->set_word(it.first);
+        new_word->set_count(it.second);
+    }
     
-    
+    int size = output.ByteSize();
+    output.SerializeToArray(&buffer[0], size);
+    buffer.resize(size);
+    send_buffer_to_collector(buffer);
+}
+
+
+void send_buffer_to_collector(vector<char>& buffer)
+{
+    MPI_Send(&buffer[0], buffer.size(), MPI_CHAR, collector_rank, 0, MPI_COMM_WORLD);
 }
 
