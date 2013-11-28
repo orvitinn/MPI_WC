@@ -22,8 +22,7 @@ using std::vector;
 using std::string;
 
 extern void mapper(MPI_Comm communicator, int rank, const string& filename);
-extern void partitioner(MPI_Comm communicator, int rank);
-extern void reducer(MPI_Comm communicator, int rank;
+extern void reducer(MPI_Comm communicator, int rank);
 
 const int MAX_MAPP_ID = 2;
 const int MAX_PART_ID = 4;
@@ -35,18 +34,12 @@ vector<int> partarar = {2, 3};
 vector<int> reddarar = {4, 5};
 
 int main(int argc, char* argv[]) {
-    MPI_Status status;
-    int rank, size, color, errs=0;
-    double START;
+    int rank, size;
     string readfilename = "/home/maa33/code/mpi_wc/pg100.txt";
     
     MPI_Init(&argc, &argv);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    
-    srand((unsigned)time(NULL) + rank*100);
-    
-    START = MPI_Wtime();
     
     // búum til com fyrir hópana
     MPI_Group mappers, partitioners, reducers, everyone;
@@ -76,10 +69,7 @@ int main(int argc, char* argv[]) {
     {
         reducer(mapparacom, rank);
     }
-    else
-    {
-        partitioner(partararcomm, rank);
-    }
+    // einn process er í gather lógík, fær niðurstöður frá öllum reducers
     
     cout << "Node " << rank << " stopping." << endl;
     MPI_Barrier(MPI_COMM_WORLD);
