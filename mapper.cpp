@@ -9,7 +9,7 @@
 #include <sstream>
 #include <cctype>
 #include <algorithm>
-#include <ctype.h>
+#include <cctype>
 #include <typeinfo>
 #include <sstream>
 #include <map>
@@ -25,7 +25,8 @@ using std::string;
 extern int overlap;
 extern int nodechucksize;
 extern vector<int> mapparar;
-
+extern vector<int> reddarar;
+extern vector<char> reddarar_range_start;
 
 void split(const std::string &s, char delim, std::vector<std::string> &elems) {
     std::stringstream ss(s);
@@ -42,8 +43,8 @@ inline std::string trim(const std::string &s)
     return (wsback<=wsfront ? std::string() : std::string(wsfront,wsback));
 }
 
-void send_buffer_to_reducers(const WorldList& data);
-void process_buffer(vector<char>&& buffer, int rank);
+void send_buffer_to_reducers(const WordList& data, int destination);
+void process_buffer(vector<char>& buffer, int rank);
 
 void mapper(MPI_Comm communicator, int rank, const string& filename)
 {
@@ -84,14 +85,21 @@ void mapper(MPI_Comm communicator, int rank, const string& filename)
         int read_bytes;
         MPI_Get_count(&status, MPI_CHAR, &read_bytes);
         text_buffer.resize(read_bytes);
-        process_buffer(std::move(text_buffer), new_rank);
-        text_buffer.clear();
+        process_buffer(text_buffer, new_rank);
+        // text_buffer.clear();
     }
     MPI_File_close(&fh);
+    
+    // send empty list for close
+    WordList output;
+    
+    for (int d: reddarar)
+        send_buffer_to_reducers(output, d);
 }
 
-void process_buffer(vector<char>&& text_buffer, int rank)
+void process_buffer(vector<char>& text_buffer, int rank)
 {
+    cout << "process_buffer" << endl;
     vector<std::string> lines;
     std::vector<std::string> words;
     std::map<string, int> teljari;
@@ -111,9 +119,13 @@ void process_buffer(vector<char>&& text_buffer, int rank)
             }
             
             if(isalpha(stafur))
+            {
+                // ss << tolower(stafur);
                 ss << stafur;
+            }
             
-            if(!isalpha(stafur) && ss.str().length() > 0){
+            if(!isalpha(stafur) && ss.str().length() > 0)
+            {
                 string ord = ss.str();
                 auto it = teljari.find(ord);
                 if (it != teljari.end())
@@ -129,33 +141,39 @@ void process_buffer(vector<char>&& text_buffer, int rank)
             }
         }
     }
+
+    
     // nú inniheldur teljari öll orð og tíðni þeirra...
+    // nú förum við í gegnum listann sem er í stafrófsröð og sendum
+    // bita á sérhvern reducers. Allt sem er minna en reddarar_range_start[i+1]
+    // fer á destination reddarar[i]
     WordList output;
+    int i=0;
     for (auto it: teljari)
     {
         cout << it.first << " : " << it.second << endl;
         Word* new_word = output.add_words();
         new_word->set_word(it.first);
         new_word->set_count(it.second);
+        if (it.first[0] > reddarar_range_start[i+1])
+        {
+            send_buffer_to_reducers(output, reddarar[i]);
+            i++;
+            output.clear_words();
+        }
     }
-    
-    send_buffer_to_reducers(output);
+    if (output.words_size() > 0)
+    {
+        send_buffer_to_reducers(output, reddarar[i]);
+    }
 }
 
-void send_buffer_to_reducers(const WorldList& data)
+void send_buffer_to_reducers(const WordList& data, int destination)
 {
-    vector<WordList> output(reddarar.size());
-    
-    for (int i=0; i<data.words_size() i++)
-    {
-        int destination_rank = rank + mapparar.size();
-        int size = output.ByteSize();
-        vector<char> buffer(size);
-        output.SerializeToArray(&buffer[0], size);
-        buffer.resize(size);
-    }
-    
-    
-    MPI_Send(&buffer[0], size, MPI_CHAR, destination_rank, 0, MPI_COMM_WORLD);
+    int size = data.ByteSize();
+    vector<char> buffer(size);
+    data.SerializeToArray(&buffer[0], size);
+    buffer.resize(size);
+    MPI_Send(&buffer[0], size, MPI_CHAR, destination, 0, MPI_COMM_WORLD);
 }
 
