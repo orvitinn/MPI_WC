@@ -14,7 +14,6 @@
 
 using std::cout;
 using std::endl;
-using std::time;
 using std::vector;
 using std::string;
 
@@ -27,7 +26,8 @@ const int BUFFER_SIZE = 1024 * 1024;
 
 void send_buffer_to_partitioner(int rank, char* buffer, int size);
 
-void reducer(MPI_Comm communicator, int rank){
+void reducer(MPI_Comm communicator, int rank)
+{
     int new_rank, new_size;
     MPI_Comm_rank(communicator,&new_rank);
     MPI_Status status;
@@ -35,9 +35,9 @@ void reducer(MPI_Comm communicator, int rank){
     char* buffer = new char[BUFFER_SIZE];
     
     while (true) {
-        MPI_Recv(buffer, BUFFER_SIZE, MPI_CHAR, MPI_ANY, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv(buffer, BUFFER_SIZE, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
         int read_bytes;
-        MPI_Get_count(&status, MPI_CHAR, read_bytes);
+        MPI_Get_count(&status, MPI_CHAR, &read_bytes);
         WordList input;
         input.ParseFromArray(buffer, read_bytes);
         
@@ -46,8 +46,7 @@ void reducer(MPI_Comm communicator, int rank){
         // vitum að listinn sem við fengum inn er raðaðaur
         for (int i=0; i<input.words_size(); i++)
         {
-            Word& word = input.words(i);
-            
+            const Word& word = input.words(i);
         }
     }
     
