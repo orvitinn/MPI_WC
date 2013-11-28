@@ -42,7 +42,7 @@ inline std::string trim(const std::string &s)
     return (wsback<=wsfront ? std::string() : std::string(wsfront,wsback));
 }
 
-void send_buffer_to_reducer(int rank, vector<char>& buffer, int size);
+void send_buffer_to_reducers(const WorldList& data);
 void process_buffer(vector<char>&& buffer, int rank);
 
 void mapper(MPI_Comm communicator, int rank, const string& filename)
@@ -126,17 +126,23 @@ void process_buffer(vector<char>&& text_buffer, int rank)
         new_word->set_count(it.second);
     }
     
-    int size = output.ByteSize();
-    vector<char> buffer(size);
-    output.SerializeToArray(&buffer[0], size);
-    buffer.resize(size);
-    // send_buffer_to_reducer(rank, buffer, size);
+    send_buffer_to_reducers(output);
 }
 
-void send_buffer_to_reducer(int rank, vector<char>& buffer, int size)
+void send_buffer_to_reducers(const WorldList& data)
 {
-    // select the corresponding reducer (one for each part of the buffer)
-    int destination_rank = rank + mapparar.size();
+    vector<WordList> output(reddarar.size());
+    
+    for (int i=0; i<data.words_size() i++)
+    {
+        int destination_rank = rank + mapparar.size();
+        int size = output.ByteSize();
+        vector<char> buffer(size);
+        output.SerializeToArray(&buffer[0], size);
+        buffer.resize(size);
+    }
+    
+    
     MPI_Send(&buffer[0], size, MPI_CHAR, destination_rank, 0, MPI_COMM_WORLD);
 }
 
