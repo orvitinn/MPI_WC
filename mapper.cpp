@@ -26,7 +26,7 @@ extern int overlap;
 extern int nodechucksize;
 extern vector<int> mapparar;
 extern vector<int> reddarar;
-extern vector<char> reddarar_range_start;
+extern vector<unsigned char> reddarar_range_start;
 
 void split(const std::string &s, char delim, std::vector<std::string> &elems) {
     std::stringstream ss(s);
@@ -44,7 +44,7 @@ inline std::string trim(const std::string &s)
 }
 
 void send_buffer_to_reducers(const WordList& data, int destination);
-void process_buffer(vector<char>& buffer, int rank);
+void process_buffer(vector<unsigned char>& buffer, int rank);
 
 void mapper(MPI_Comm communicator, int rank, const string& filename)
 {
@@ -64,7 +64,7 @@ void mapper(MPI_Comm communicator, int rank, const string& filename)
     int chunksize = nodechucksize * sizeof(char);
     loopoffset = new_size*nodechucksize;
     readoverlap = overlap * sizeof(char);
-    vector<char> text_buffer(chunksize+overlap);
+    vector<unsigned char> text_buffer(chunksize+overlap);
 
 
     MPI_Offset mypart = filesize/new_size;
@@ -97,7 +97,7 @@ void mapper(MPI_Comm communicator, int rank, const string& filename)
         send_buffer_to_reducers(output, d);
 }
 
-void process_buffer(vector<char>& text_buffer, int rank)
+void process_buffer(vector<unsigned char>& text_buffer, int rank)
 {
     cout << "process_buffer" << endl;
     vector<std::string> lines;
@@ -151,15 +151,15 @@ void process_buffer(vector<char>& text_buffer, int rank)
     int i=0;
     for (auto it: teljari)
     {
-        cout << it.first << " : " << it.second << endl;
+        cout << "[" << it.first << "] : " << it.second << endl;
         Word* new_word = output.add_words();
         new_word->set_word(it.first);
         new_word->set_count(it.second);
         if (it.first[0] > reddarar_range_start[i+1])
         {
             send_buffer_to_reducers(output, reddarar[i]);
-            i++;
             output.clear_words();
+            i++;
         }
     }
     if (output.words_size() > 0)
@@ -171,7 +171,7 @@ void process_buffer(vector<char>& text_buffer, int rank)
 void send_buffer_to_reducers(const WordList& data, int destination)
 {
     int size = data.ByteSize();
-    vector<char> buffer(size);
+    vector<unsigned char> buffer(size);
     data.SerializeToArray(&buffer[0], size);
     buffer.resize(size);
     MPI_Send(&buffer[0], size, MPI_CHAR, destination, 0, MPI_COMM_WORLD);

@@ -25,7 +25,7 @@ extern vector<int> mapparar;
 
 const int BUFFER_SIZE = 1024 * 1024;
 
-void send_buffer_to_collector(vector<char>& buffer);
+void send_buffer_to_collector(vector<unsigned char>& buffer);
 
 void reducer(MPI_Comm communicator, int rank)
 {
@@ -34,11 +34,12 @@ void reducer(MPI_Comm communicator, int rank)
     MPI_Comm_rank(communicator,&new_rank);
     MPI_Status status;
 
-    vector<char> buffer(BUFFER_SIZE);
+    vector<unsigned char> buffer(BUFFER_SIZE);
     std::map<string, int> teljari;
-    int quit_count=0;
+    unsigned int quit_count=0;
     
     while (true) {
+        buffer.reserve(BUFFER_SIZE);
         MPI_Recv(&buffer[0], BUFFER_SIZE, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
         int read_bytes;
         MPI_Get_count(&status, MPI_CHAR, &read_bytes);
@@ -61,7 +62,7 @@ void reducer(MPI_Comm communicator, int rank)
             }
         }
         
-        cout << "Reducer " << rank << " got " << input.words_size() << " words from a mapper. Processing." << endl;
+        cout << "Reducer " << rank << "read [ " << read_bytes << "," << buffer.size() << "] bytes and got " << input.words_size() << " words from a mapper. Processing." << endl;
         
         for (int i=0; i<input.words_size(); i++)
         {
@@ -79,24 +80,27 @@ void reducer(MPI_Comm communicator, int rank)
     }
                                    
     // done... send everything to the collector
-    cout << "reducer " << rank << "done receiving data, sending to the collector" << endl;
+    cout << "reducer " << rank << "done receiving data, sending to the collector. Have " << teljari.size() << " words. " << endl;
 
     WordList output;
     for (auto it: teljari)
     {
+        cout << "[[" << it.first << "]] : " << it.second << endl;
         Word* new_word = output.add_words();
         new_word->set_word(it.first);
         new_word->set_count(it.second);
     }
     
     int size = output.ByteSize();
+    buffer.reserve(size);
     output.SerializeToArray(&buffer[0], size);
     buffer.resize(size);
+    cout << "Recuder " << rank << " sending " << buffer.size() << " bytes to the collector." << endl;
     send_buffer_to_collector(buffer);
 }
 
 
-void send_buffer_to_collector(vector<char>& buffer)
+void send_buffer_to_collector(vector<unsigned char>& buffer)
 {
     MPI_Send(&buffer[0], buffer.size(), MPI_CHAR, collector_rank, 0, MPI_COMM_WORLD);
 }

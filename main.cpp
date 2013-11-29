@@ -33,7 +33,7 @@ int collector_rank;
 
 vector<int> mapparar = {0, 1};
 vector<int> reddarar = {2, 3};
-vector<char> reddarar_range_start = {'a','m', 127};
+vector<unsigned char> reddarar_range_start = {'a','i', 255};
 
 int main(int argc, char* argv[]) {
     int rank, size;

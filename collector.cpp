@@ -31,9 +31,9 @@ void collector(int rank)
     cout << "Collector running, rank: " << rank << endl;
     MPI_Status status;
 
-    vector<char> buffer(BUFFER_SIZE);
+    vector<unsigned char> buffer(BUFFER_SIZE);
     std::map<string, int> teljari;
-    int count=0;
+    unsigned int count=0;
     
     while (count < reddarar.size()) {
         MPI_Recv(&buffer[0], BUFFER_SIZE, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
@@ -41,10 +41,15 @@ void collector(int rank)
         MPI_Get_count(&status, MPI_CHAR, &read_bytes);
         buffer.resize(read_bytes);
         WordList input;
-        input.ParseFromArray(&buffer[0], read_bytes);
+        if (input.ParseFromArray(&buffer[0], read_bytes) == false)
+        {
+            cout << "Collector got an error parsing input. See description in stdout." << endl;
+        }
         count++;
         cout << "Collector read [" << read_bytes << "] bytes, [" << input.words_size() << "], count: " << count << endl;
-        
+        std::ostream tmp_stream(cout.rdbuf());
+        input.SerializeToOstream(&tmp_stream);
+        cout.flush();
         for (int i=0; i<input.words_size(); i++)
         {
             const Word& word = input.words(i);
@@ -55,7 +60,7 @@ void collector(int rank)
             }
             else
             {
-                teljari[it->first] = 1;
+                teljari[word.word()] = 1;
             }
         }
     }
@@ -76,6 +81,6 @@ void collector(int rank)
     // now just write the buffer to a single file.
     cout << "Writing file of size " << size << endl;
     std::ofstream outfile ("/home/maa33/code/mpi_wc/wc.data", std::ofstream::binary);
-    outfile.write(&buffer[0], size);
+    outfile.write(reinterpret_cast<char*>(&buffer[0]), size);
     outfile.close();
 }
