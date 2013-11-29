@@ -36,20 +36,27 @@ void collector(int rank)
     unsigned int count=0;
     
     while (count < reddarar.size()) {
-        MPI_Recv(&buffer[0], BUFFER_SIZE, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv(&buffer[0], BUFFER_SIZE, MPI_UNSIGNED_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+        count++;
         int read_bytes;
-        MPI_Get_count(&status, MPI_CHAR, &read_bytes);
+        MPI_Get_count(&status, MPI_UNSIGNED_CHAR, &read_bytes);
         buffer.resize(read_bytes);
         WordList input;
         if (input.ParseFromArray(&buffer[0], read_bytes) == false)
         {
             cout << "Collector got an error parsing input. See description in stdout." << endl;
+            std::stringstream ss;
+            ss << "/home/maa33/code/mpi_wc/collector" << count << ".txt";
+            string filename = ss.str();
+            std::ofstream outfile(filename, std::ofstream::binary);
+            outfile.write(reinterpret_cast<char*>(&buffer[0]), buffer.size());
+            outfile.close();
+            continue;
         }
-        count++;
         cout << "Collector read [" << read_bytes << "] bytes, [" << input.words_size() << "], count: " << count << endl;
-        std::ostream tmp_stream(cout.rdbuf());
-        input.SerializeToOstream(&tmp_stream);
-        cout.flush();
+        // std::ostream tmp_stream(cout.rdbuf());
+        // input.SerializeToOstream(&tmp_stream);
+        // cout.flush();
         for (int i=0; i<input.words_size(); i++)
         {
             const Word& word = input.words(i);

@@ -28,7 +28,7 @@ extern void collector(int rank);
 const int MAX_MAPP_ID = 2;
 const int MAX_PART_ID = 4;
 int overlap = 20;
-int nodechucksize=20000;
+int nodechucksize=50000;
 int collector_rank;
 
 vector<int> mapparar = {0, 1};

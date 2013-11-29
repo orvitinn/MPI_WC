@@ -79,11 +79,11 @@ void mapper(MPI_Comm communicator, int rank, const string& filename)
             }
         }
         
-        MPI_File_set_view(fh,(new_rank*chunksize+(loopoffset*i)),MPI_CHAR,MPI_CHAR,"native",MPI_INFO_NULL);
-        MPI_File_read(fh, &text_buffer[0], chunksize+readoverlap, MPI_CHAR, &status);
+        MPI_File_set_view(fh,(new_rank*chunksize+(loopoffset*i)),MPI_UNSIGNED_CHAR,MPI_UNSIGNED_CHAR,"native",MPI_INFO_NULL);
+        MPI_File_read(fh, &text_buffer[0], chunksize+readoverlap, MPI_UNSIGNED_CHAR, &status);
     
         int read_bytes;
-        MPI_Get_count(&status, MPI_CHAR, &read_bytes);
+        MPI_Get_count(&status, MPI_UNSIGNED_CHAR, &read_bytes);
         text_buffer.resize(read_bytes);
         process_buffer(text_buffer, new_rank);
         // text_buffer.clear();
@@ -158,7 +158,7 @@ void process_buffer(vector<unsigned char>& text_buffer, int rank)
         if (it.first[0] > reddarar_range_start[i+1])
         {
             send_buffer_to_reducers(output, reddarar[i]);
-            output.clear_words();
+            output.clear();
             i++;
         }
     }
@@ -174,6 +174,6 @@ void send_buffer_to_reducers(const WordList& data, int destination)
     vector<unsigned char> buffer(size);
     data.SerializeToArray(&buffer[0], size);
     buffer.resize(size);
-    MPI_Send(&buffer[0], size, MPI_CHAR, destination, 0, MPI_COMM_WORLD);
+    MPI_Send(&buffer[0], size, MPI_UNSIGNED_CHAR, destination, 0, MPI_COMM_WORLD);
 }
 
