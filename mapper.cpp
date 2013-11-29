@@ -171,15 +171,19 @@ void process_buffer(vector<unsigned char>& text_buffer, int rank)
 void send_buffer_to_reducers(const WordList& data, int destination)
 {
     int size = data.ByteSize();
-    vector<unsigned char> buffer(size);
-    data.SerializeToArray(&buffer[0], size);
-    buffer.resize(size);
-    MPI_Send(&buffer[0], size, MPI_UNSIGNED_CHAR, destination, 0, MPI_COMM_WORLD);
+    // vector<unsigned char> buffer(size);
+    unsigned char* buffer = new unsigned char[size];
+    // data.SerializeToArray(&buffer[0], size);
+    data.SerializeToArray(buffer, size);
+    // buffer.resize(size);
+    // MPI_Send(&buffer[0], size, MPI_UNSIGNED_CHAR, destination, 0, MPI_COMM_WORLD);
+    MPI_Send(buffer, size, MPI_UNSIGNED_CHAR, destination, 0, MPI_COMM_WORLD);
     
-#if 0
+#if 1
     // prófa...
+    vector<unsigned char> buffer2(1024*1024);
     WordList test;
-    if (test.ParseFromArray(&buffer[0], size) == true)
+    if (test.ParseFromArray(&buffer2[0], size) == true)
     {
         cout << "Mapper parsing ok." << endl;
     }

@@ -25,14 +25,14 @@ extern void mapper(MPI_Comm communicator, int rank, const string& filename);
 extern void reducer(MPI_Comm communicator, int rank);
 extern void collector(int rank);
 
-const int MAX_MAPP_ID = 4;
+const int MAX_MAPP_ID = 6;
 int overlap = 20;
 int nodechucksize=50000;
 int collector_rank;
 
-vector<int> mapparar = {0, 1, 2, 3};
-vector<int> reddarar = {4, 5};
-vector<unsigned char> reddarar_range_start = {'a','i', 255};
+vector<int> mapparar = {0, 1, 2, 3, 4, 5};
+vector<int> reddarar = {6, 7, 8};
+vector<unsigned char> reddarar_range_start = {'a','e', 'm', 255};
 
 int main(int argc, char* argv[]) {
     int rank, size;
@@ -45,6 +45,19 @@ int main(int argc, char* argv[]) {
     
     collector_rank = size-1; // sá síðasti er kollektorinn
     
+    /*
+    for (int i=0; i<collector_rank; i++)
+    {
+        if (rank < MAX_MAPP_ID)
+        {
+            mapparar.push_back(i++);
+        }
+        else
+        {
+            reddarar.push_back(i++);
+        }
+    }*/
+    
     // búum til com fyrir hópana
     MPI_Group mappers, reducers, everyone;
     MPI_Comm mapparacom, reddararcomm;
@@ -54,21 +67,24 @@ int main(int argc, char* argv[]) {
 
     // ákveðum
     
-    MPI_Group_incl(everyone, 2, &mapparar[0], &mappers);
+    MPI_Group_incl(everyone, mapparar.size(), &mapparar[0], &mappers);
     MPI_Comm_create(MPI_COMM_WORLD, mappers, &mapparacom);
     
-    MPI_Group_incl(everyone, 2, &reddarar[0], &reducers);
+    MPI_Group_incl(everyone, reddarar.size(), &reddarar[0], &reducers);
     MPI_Comm_create(MPI_COMM_WORLD, reducers, &reddararcomm);
     
     cout << "DONE creating groups and comms" << endl;
     
+    int i = 0;
     if (rank < MAX_MAPP_ID)
     {
         mapper(mapparacom, rank, readfilename);
+        mapparar.push_back(i++);
     }
     else if (rank < size-1)
     {
         reducer(reddararcomm, rank);
+        reddarar.push_back(i++);
     }
     else
     {
