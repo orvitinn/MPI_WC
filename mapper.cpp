@@ -151,14 +151,14 @@ void process_buffer(vector<unsigned char>& text_buffer, int rank)
     int i=0;
     for (auto it: teljari)
     {
-        cout << "[" << it.first << "] : " << it.second << endl;
+        // cout << "[" << it.first << "] : " << it.second << endl;
         Word* new_word = output.add_words();
         new_word->set_word(it.first);
         new_word->set_count(it.second);
         if (it.first[0] > reddarar_range_start[i+1])
         {
             send_buffer_to_reducers(output, reddarar[i]);
-            output.clear();
+            output.Clear();
             i++;
         }
     }
@@ -175,5 +175,18 @@ void send_buffer_to_reducers(const WordList& data, int destination)
     data.SerializeToArray(&buffer[0], size);
     buffer.resize(size);
     MPI_Send(&buffer[0], size, MPI_UNSIGNED_CHAR, destination, 0, MPI_COMM_WORLD);
+    
+#if 0
+    // prófa...
+    WordList test;
+    if (test.ParseFromArray(&buffer[0], size) == true)
+    {
+        cout << "Mapper parsing ok." << endl;
+    }
+    else
+    {
+        cout << "Mapper parsing failed." << endl;
+    }
+#endif
 }
 

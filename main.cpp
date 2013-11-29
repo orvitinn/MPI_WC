@@ -25,14 +25,13 @@ extern void mapper(MPI_Comm communicator, int rank, const string& filename);
 extern void reducer(MPI_Comm communicator, int rank);
 extern void collector(int rank);
 
-const int MAX_MAPP_ID = 2;
-const int MAX_PART_ID = 4;
+const int MAX_MAPP_ID = 4;
 int overlap = 20;
 int nodechucksize=50000;
 int collector_rank;
 
-vector<int> mapparar = {0, 1};
-vector<int> reddarar = {2, 3};
+vector<int> mapparar = {0, 1, 2, 3};
+vector<int> reddarar = {4, 5};
 vector<unsigned char> reddarar_range_start = {'a','i', 255};
 
 int main(int argc, char* argv[]) {

@@ -46,10 +46,14 @@ void reducer(MPI_Comm communicator, int rank)
         MPI_Get_count(&status, MPI_UNSIGNED_CHAR, &read_bytes);
         buffer.resize(read_bytes);
         WordList input;
+        
         bool res = input.ParseFromArray(&buffer[0], read_bytes);
+        
+        
         if (res == false)
         {
-            cout << "Reducer " << rank << "got an error parsing a message from mapper. Still continuing." << endl;
+            cout << "Reducer " << rank << " got an error parsing a message from mapper. Dropping data." << endl;
+            continue;
         }
         // ef við fáum tóman lista frá öllum möppurum er þessi nóða hætt.
         if (input.words_size() == 0)
@@ -71,7 +75,9 @@ void reducer(MPI_Comm communicator, int rank)
         for (int i=0; i<input.words_size(); i++)
         {
             const Word& word = input.words(i);
+            // cout << "Word: " << word.word() << ":" << word.count() << endl;
             auto it = teljari.find(word.word());
+            
             if (it != teljari.end())
             {
                 it->second++;
@@ -101,8 +107,10 @@ void reducer(MPI_Comm communicator, int rank)
     buffer.resize(size);
     cout << "Reducer " << rank << " sending " << buffer.size() << " bytes to the collector. Res=" << res << endl;
 
+    // cout << output.DebugString() << endl;
+    
     WordList test;
-    if (test.ParseFromArray(&buffer[0], buffer.size()))
+    if (test.ParseFromArray(&buffer[0], buffer.size()+1))
     {
         cout << "Reducer " << rank << " managed to parse the protobuf messages" << endl;
     }
